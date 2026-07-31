@@ -8,7 +8,7 @@
 import { prisma } from '../db';
 import { RMABLogger } from '../utils/logger';
 import { getSABnzbdService } from '../integrations/sabnzbd.service';
-import { getQBittorrentService } from '../integrations/qbittorrent.service';
+import { getConfigService } from '../services/config.service';
 
 export interface RecoverStuckRequestsPayload {
   jobId?: string;
@@ -16,11 +16,18 @@ export interface RecoverStuckRequestsPayload {
 }
 
 export async function processRecoverStuckRequests(payload: RecoverStuckRequestsPayload = {}): Promise<any> {
-  const { jobId, stuckTimeoutHours = 2 } = payload;
-  const logger = RMABLogger.forJob(jobId, 'RecoverStuckRequests');
+  const logger = RMABLogger.forJob(payload.jobId, 'RecoverStuckRequests');
+  const configService = getConfigService();
+
+  const stuckTimeoutHours = payload.stuckTimeoutHours ?? (await configService.getStuckRequestTimeoutHours());
+
+  if (stuckTimeoutHours === 0) {
+    logger.info('Stuck request recovery is currently disabled (timeout configured to 0 hours).');
+    return { success: true, disabled: true, reason: 'Stuck request recovery disabled' };
+  }
 
   const cutoff = new Date(Date.now() - stuckTimeoutHours * 60 * 60 * 1000);
-  logger.info(`Scanning for stuck requests updated before ${cutoff.toISOString()}...`);
+  logger.info(`Scanning for stuck requests updated before ${cutoff.toISOString()} (timeout: ${stuckTimeoutHours}h)...`);
 
   const stuckRequests = await prisma.request.findMany({
     where: {

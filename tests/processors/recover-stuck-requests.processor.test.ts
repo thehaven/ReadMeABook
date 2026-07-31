@@ -18,8 +18,10 @@ vi.mock('@/lib/integrations/sabnzbd.service', () => ({
   }),
 }));
 
-vi.mock('@/lib/integrations/qbittorrent.service', () => ({
-  getQBittorrentService: () => ({}),
+vi.mock('@/lib/services/config.service', () => ({
+  getConfigService: () => ({
+    getStuckRequestTimeoutHours: vi.fn().mockResolvedValue(6),
+  }),
 }));
 
 describe('Recover Stuck Requests Processor', () => {
@@ -32,7 +34,7 @@ describe('Recover Stuck Requests Processor', () => {
       {
         id: 'req-1',
         status: 'searching',
-        updatedAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
+        updatedAt: new Date(Date.now() - 7 * 60 * 60 * 1000),
         audiobook: { title: 'Mistborn: Secret History' },
       },
     ] as any);
@@ -47,5 +49,13 @@ describe('Recover Stuck Requests Processor', () => {
       where: { id: 'req-1' },
       data: expect.objectContaining({ status: 'awaiting_search' }),
     });
+  });
+
+  it('should disable recovery when stuckTimeoutHours is configured to 0', async () => {
+    const result = await processRecoverStuckRequests({ stuckTimeoutHours: 0 });
+
+    expect(result.success).toBe(true);
+    expect(result.disabled).toBe(true);
+    expect(prismaMock.request.findMany).not.toHaveBeenCalled();
   });
 });
