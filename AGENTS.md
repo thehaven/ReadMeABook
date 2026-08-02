@@ -23,8 +23,15 @@ rsync -av /storage/home/haven/projects/ReadMeABook/src/ /storage/docker/readmeab
 docker cp /storage/home/haven/projects/ReadMeABook/src readmeabook:/app/
 
 # Run Next.js production build inside container & restart
+# MANDATORY: Always clear Next.js Turbopack build cache before building!
+# Failing to clear cache causes Next.js to serve stale compiled JS chunks from .next/cache.
+docker exec readmeabook rm -rf /app/.next/cache
 docker exec -w /app readmeabook npx next build
 docker restart readmeabook
+
+# Execute tsx scripts inside container
+# MANDATORY: Always include DATABASE_URL when executing tsx in container!
+docker exec -e DATABASE_URL="postgresql://readmeabook:password@127.0.0.1:5432/readmeabook" readmeabook npx tsx -e "..."
 
 # Health check
 docker exec readmeabook curl -s http://localhost:3030/api/health
@@ -38,6 +45,13 @@ docker exec readmeabook curl -s http://localhost:3030/api/health
 - **INVARIANT**: Request status `downloaded` (and `completed`) means file organization to `/media/audiobooks/` is COMPLETE.
 - **Rule**: `downloaded` MUST ALWAYS be classified as `'In Library'` / `'available'` (Emerald green badge).
 - **CRITICAL FIX**: Never place `'downloaded'` inside `processingStatuses` (`['downloading', 'processing', 'awaiting_import']`). Placing `'downloaded'` in `processingStatuses` causes completed audiobooks to render an Amber "Processing" badge indefinitely.
+
+| Request Status | UI Category | Badge Color | Label |
+|---|---|---|---|
+| `available`, `completed`, `downloaded` | `available` | **Emerald (Green)** | In Library / In Your Library |
+| `downloading`, `processing`, `awaiting_import` | `processing` | **Amber (Orange)** | Processing |
+| `pending`, `searching`, `awaiting_search`, `awaiting_release`, `awaiting_approval` | `pending` | **Blue** | Requested / Awaiting Search |
+| `denied`, `failed` | `denied` / `failed` | **Red** | Request Denied / Failed |
 
 ### B. Download Failure & Release Auto-Blocking (`monitor-download.processor.ts`)
 - **INVARIANT**: When a download client (SABnzbd, NZBGet, qBittorrent) flags a release as a duplicate or failure, `addAutoBlock` MUST be invoked unconditionally.
@@ -83,8 +97,10 @@ openspec validate <change-id> --strict
 To minimize prompt size and avoid unnecessary loops:
 
 1. **Direct Database Inspection**: Query Postgres directly via `docker exec readmeabook psql -U readmeabook -d readmeabook -c "..."` instead of writing custom script wrappers for routine checks.
-2. **Targeted File Reads**: Use `view_file` with precise `StartLine` and `EndLine` parameters. Avoid fetching entire 1,000+ line files.
-3. **No Polling Loops**: After starting async tasks or builds, use `schedule` or check status once without infinite polling loops.
-4. **Git Remote Convention**:
+2. **Container TSX Environment**: ALWAYS pass `-e DATABASE_URL="postgresql://readmeabook:password@127.0.0.1:5432/readmeabook"` when running `npx tsx` inside the container.
+3. **Clean Build Protocol**: ALWAYS run `docker exec readmeabook rm -rf /app/.next/cache` prior to `npx next build` to prevent Turbopack cache contamination of modified `.tsx` components.
+4. **Targeted File Reads**: Use `view_file` with precise `StartLine` and `EndLine` parameters. Avoid fetching entire 1,000+ line files.
+5. **No Polling Loops**: After starting async tasks or builds, use `schedule` or check status once without infinite polling loops.
+6. **Git Remote Convention**:
    - `origin`: GitHub fork (`https://github.com/thehaven/ReadMeABook.git`) — use for branch pushes & PR creation via `gh`.
    - `gitlab`: Canonical internal repo (`git@gitlab.com:thehaven/ReadMeABook.git`).
