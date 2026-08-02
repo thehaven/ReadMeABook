@@ -81,7 +81,21 @@ export async function processMonitorDownload(payload: MonitorDownloadPayload): P
     const info = await client.getDownload(downloadClientId);
 
     if (!info) {
-      throw new Error(`Download ${downloadClientId} not found in ${downloadClient}`);
+      logger.warn(`Download ${downloadClientId} not found in ${downloadClient}. Resetting request to awaiting_search for re-download.`);
+      await prisma.request.update({
+        where: { id: requestId },
+        data: {
+          status: 'awaiting_search',
+          errorMessage: `Download vanished from ${downloadClient} client. Reset for automatic re-search.`,
+          updatedAt: new Date(),
+        },
+      });
+      return {
+        success: true,
+        completed: false,
+        message: `Download vanished from ${downloadClient}, reset request to awaiting_search`,
+        requestId,
+      };
     }
 
     // Build progress object for request updates
