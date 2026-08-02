@@ -146,6 +146,41 @@ describe('audiobook-matcher', () => {
     expect(results[1].isAvailable).toBe(false);
     expect(results[1].isRequested).toBe(false);
   });
+
+  it('prioritizes available status over newer awaiting_search status', async () => {
+    prismaMock.plexLibrary.findMany.mockResolvedValue([]);
+    prismaMock.audiobook.findMany.mockResolvedValue([
+      {
+        id: 'a1',
+        audibleAsin: 'ASIN1',
+        title: 'Magic Kingdom for Sale--Sold!',
+        author: 'Terry Brooks',
+        requests: [
+          {
+            id: 'req-newest',
+            status: 'awaiting_search',
+            userId: 'user-1',
+            user: { plexUsername: 'User1' },
+          },
+          {
+            id: 'req-available',
+            status: 'available',
+            userId: 'user-1',
+            user: { plexUsername: 'User1' },
+          },
+        ],
+      },
+    ]);
+    prismaMock.reportedIssue.findMany.mockResolvedValue([]);
+
+    const { enrichAudiobooksWithMatches } = await import('@/lib/utils/audiobook-matcher');
+    const results = await enrichAudiobooksWithMatches([
+      { asin: 'ASIN1', title: 'Magic Kingdom for Sale--Sold!', author: 'Terry Brooks' },
+    ]);
+
+    expect(results[0].requestStatus).toBe('available');
+    expect(results[0].isAvailable).toBe(true);
+  });
 });
 
 

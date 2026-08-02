@@ -173,6 +173,8 @@ describe('processWatchedLists', () => {
     prismaMock.plexLibrary.findMany.mockResolvedValue([
       { asin: 'B001BOOK01' },
     ]);
+    prismaMock.audiobook.findMany.mockResolvedValue([]);
+    prismaMock.request.findMany.mockResolvedValue([]);
 
     mockCreateRequestForUser.mockResolvedValue({ success: true, request: {} });
 
@@ -183,6 +185,62 @@ describe('processWatchedLists', () => {
     expect(stats.requestsCreated).toBe(1);
     expect(mockCreateRequestForUser).toHaveBeenCalledTimes(1);
     expect(mockCreateRequestForUser).toHaveBeenCalledWith('user-1', expect.objectContaining({ asin: 'B001BOOK02' }));
+  });
+
+  it('skips books present in Audiobook table or completed Request table', async () => {
+    prismaMock.watchedSeries.findMany.mockResolvedValue([
+      {
+        id: 'ws-1',
+        userId: 'user-1',
+        seriesAsin: 'B001SERIES1',
+        seriesTitle: 'Test Series',
+        coverArtUrl: null,
+        lastCheckedAt: null,
+        user: { id: 'user-1', plexUsername: 'testuser' },
+      },
+    ]);
+
+    prismaMock.watchedAuthor.findMany.mockResolvedValue([]);
+    prismaMock.watchedSeries.update.mockResolvedValue({});
+
+    mockScrapeSeriesPage.mockResolvedValueOnce({
+      asin: 'B001SERIES1',
+      title: 'Test Series',
+      bookCount: 2,
+      books: [
+        { asin: 'B001BOOK01', title: 'Book One', author: 'Author A' },
+        { asin: 'B001BOOK02', title: 'Book Two', author: 'Author A' },
+      ],
+      hasMore: false,
+      page: 1,
+    });
+
+    mockDeduplicateAndCollectGroups.mockReturnValue({
+      books: [
+        { asin: 'B001BOOK01', title: 'Book One', author: 'Author A' },
+        { asin: 'B001BOOK02', title: 'Book Two', author: 'Author A' },
+      ],
+      groups: [],
+    });
+
+    prismaMock.plexLibrary.findMany.mockResolvedValue([]);
+    // Book One is present in Audiobook table (Audiobookshelf)
+    prismaMock.audiobook.findMany.mockResolvedValue([
+      { audibleAsin: 'B001BOOK01' },
+    ]);
+    // Book Two is present in Request table as available
+    prismaMock.request.findMany.mockResolvedValue([
+      { audiobook: { audibleAsin: 'B001BOOK02' } },
+    ]);
+
+    mockCreateRequestForUser.mockResolvedValue({ success: true, request: {} });
+
+    const { processWatchedLists } = await import('@/lib/services/watched-lists.service');
+    const stats = await processWatchedLists();
+
+    expect(stats.skippedOwned).toBe(2);
+    expect(stats.requestsCreated).toBe(0);
+    expect(mockCreateRequestForUser).not.toHaveBeenCalled();
   });
 
   it('processes watched authors and creates requests', async () => {

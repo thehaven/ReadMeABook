@@ -69,6 +69,26 @@ export async function createRequestForUser(
     };
   }
 
+  // Check if audiobook is already in Audiobookshelf / DB library table
+  const existingAudiobook = await prisma.audiobook.findFirst({
+    where: {
+      audibleAsin: audiobook.asin,
+    },
+  });
+
+  if (
+    existingAudiobook &&
+    (existingAudiobook.status === 'completed' ||
+      !!existingAudiobook.filePath ||
+      !!(existingAudiobook as any).absItemId)
+  ) {
+    return {
+      success: false,
+      reason: 'already_available',
+      message: 'This audiobook is already available in your library',
+    };
+  }
+
   // Check if audiobook is already in Plex/ABS library
   const plexMatch = await findPlexMatch({
     asin: audiobook.asin,

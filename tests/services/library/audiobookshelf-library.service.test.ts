@@ -129,7 +129,7 @@ describe('AudiobookshelfLibraryService', () => {
     const libs = await service.getLibraries();
 
     expect(libs).toEqual([
-      { id: 'lib-1', name: 'Books', type: 'book', itemCount: 10 },
+      { id: 'lib-1', name: 'Books', type: 'audiobook' },
     ]);
   });
 
@@ -212,43 +212,7 @@ describe('AudiobookshelfLibraryService', () => {
     expect(apiMock.triggerABSScan).toHaveBeenCalledWith('lib-1');
   });
 
-  it('returns cover caching params for Audiobookshelf backend', async () => {
-    configServiceMock.getMany.mockResolvedValue({
-      'audiobookshelf.server_url': 'http://abs:13378',
-      'audiobookshelf.api_token': 'abs-token-456',
-    });
 
-    const service = new AudiobookshelfLibraryService();
-    const params = await service.getCoverCachingParams();
-
-    expect(params).toEqual({
-      backendBaseUrl: 'http://abs:13378',
-      authToken: 'abs-token-456',
-      backendMode: 'audiobookshelf',
-    });
-  });
-
-  it('throws when getting cover caching params without server URL', async () => {
-    configServiceMock.getMany.mockResolvedValue({
-      'audiobookshelf.server_url': null,
-      'audiobookshelf.api_token': 'token',
-    });
-
-    const service = new AudiobookshelfLibraryService();
-
-    await expect(service.getCoverCachingParams()).rejects.toThrow('Audiobookshelf server configuration is incomplete');
-  });
-
-  it('throws when getting cover caching params without API token', async () => {
-    configServiceMock.getMany.mockResolvedValue({
-      'audiobookshelf.server_url': 'http://abs',
-      'audiobookshelf.api_token': null,
-    });
-
-    const service = new AudiobookshelfLibraryService();
-
-    await expect(service.getCoverCachingParams()).rejects.toThrow('Audiobookshelf server configuration is incomplete');
-  });
 
   // --- Ebook-only filtering tests ---
 

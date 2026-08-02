@@ -44,10 +44,14 @@ export default function AuthorDetailPage({
   }, [router]);
 
   // Filter out available titles when hideAvailable is enabled
-  const filteredBooks = useMemo(
-    () => hideAvailable ? books.filter((b: Audiobook) => !b.isAvailable && b.requestStatus !== 'completed') : books,
-    [books, hideAvailable]
-  );
+  const filteredBooks = useMemo(() => {
+    if (!hideAvailable) return books;
+    return books.filter((b: Audiobook) => {
+      const isAvailableInLibrary =
+        b.isAvailable || ['available', 'downloaded', 'completed'].includes(b.requestStatus || '');
+      return !isAvailableInLibrary;
+    });
+  }, [books, hideAvailable]);
 
   // Header count text: reflects filtered counts
   const visibleCount = filteredBooks.length;

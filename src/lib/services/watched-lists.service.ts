@@ -366,13 +366,34 @@ async function createRequestsForUser(
 async function getOwnedAsins(asins: string[]): Promise<Set<string>> {
   const owned = new Set<string>();
 
-  // Direct library lookup
-  const libraryItems = await prisma.plexLibrary.findMany({
+  // Direct Plex library lookup
+  const libraryItems = (await prisma.plexLibrary?.findMany({
     where: { asin: { in: asins } },
     select: { asin: true },
-  });
+  })) || [];
   for (const item of libraryItems) {
     if (item.asin) owned.add(item.asin);
+  }
+
+  // Audiobook table lookup (Audiobookshelf & synced library items)
+  const audiobooks = (await prisma.audiobook?.findMany({
+    where: { audibleAsin: { in: asins } },
+    select: { audibleAsin: true },
+  })) || [];
+  for (const item of audiobooks) {
+    if (item.audibleAsin) owned.add(item.audibleAsin);
+  }
+
+  // Active requests with available/downloaded/completed status
+  const availableRequests = (await prisma.request?.findMany({
+    where: {
+      status: { in: ['available', 'downloaded', 'completed'] },
+      audiobook: { audibleAsin: { in: asins } },
+    },
+    select: { audiobook: { select: { audibleAsin: true } } },
+  })) || [];
+  for (const r of availableRequests) {
+    if (r.audiobook?.audibleAsin) owned.add(r.audiobook.audibleAsin);
   }
 
   // Sibling expansion via works table

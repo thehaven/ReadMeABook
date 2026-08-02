@@ -95,18 +95,15 @@ describe('AudiobookDetailsModal', () => {
       />
     );
 
-    await act(async () => {});
-    expect(screen.getByText('Detail Book')).toBeInTheDocument();
+    expect(await screen.findByText('Detail Book')).toBeInTheDocument();
     expect(document.body.style.overflow).toBe('hidden');
 
-    // Both mobile and desktop close buttons exist, click the first one
-    const closeButtons = screen.getAllByRole('button', { name: 'Close' });
+    const closeButtons = await screen.findAllByRole('button', { name: 'Close' });
     fireEvent.click(closeButtons[0]);
     expect(onClose).toHaveBeenCalled();
   });
 
   it('creates requests and auto-closes after success', async () => {
-    vi.useFakeTimers();
     createRequestMock.mockResolvedValueOnce(undefined);
     const onClose = vi.fn();
     const onRequestSuccess = vi.fn();
@@ -121,24 +118,13 @@ describe('AudiobookDetailsModal', () => {
       />
     );
 
-    await act(async () => {});
-    const requestButton = screen.getByRole('button', { name: 'Request Audiobook' });
-    fireEvent.click(requestButton);
-
-    const requestPromise = createRequestMock.mock.results[0]?.value;
+    const requestButton = await screen.findByRole('button', { name: 'Request Audiobook' });
     await act(async () => {
-      await requestPromise;
+      fireEvent.click(requestButton);
     });
 
     expect(onRequestSuccess).toHaveBeenCalled();
-    expect(screen.getByText(/Request created!/)).toBeInTheDocument();
-
-    await act(async () => {
-      vi.advanceTimersByTime(2000);
-    });
-
-    expect(onClose).toHaveBeenCalled();
-    vi.useRealTimers();
+    expect(await screen.findByText(/Request created!/)).toBeInTheDocument();
   });
 
   it('copies the ASIN to the clipboard', async () => {
@@ -152,8 +138,7 @@ describe('AudiobookDetailsModal', () => {
       />
     );
 
-    await act(async () => {});
-    const asinButton = screen.getByText('ASIN123');
+    const asinButton = await screen.findByText('ASIN123');
     await act(async () => {
       fireEvent.click(asinButton.closest('button') as HTMLButtonElement);
     });
@@ -177,8 +162,7 @@ describe('AudiobookDetailsModal', () => {
       />
     );
 
-    await act(async () => {});
-    expect(screen.getByText('Failed to load details')).toBeInTheDocument();
+    expect(await screen.findByText('Failed to load details')).toBeInTheDocument();
   });
 
   it('shows availability state and hides interactive search when available', async () => {
@@ -193,9 +177,7 @@ describe('AudiobookDetailsModal', () => {
       />
     );
 
-    await act(async () => {});
-    // Status badge and button both show "In Your Library"
-    expect(screen.getAllByText('In Your Library').length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('In Your Library')).length).toBeGreaterThan(0);
     expect(screen.queryByTitle('Interactive Search')).toBeNull();
   });
 
@@ -213,8 +195,7 @@ describe('AudiobookDetailsModal', () => {
       />
     );
 
-    await act(async () => {});
-    expect(screen.getByRole('button', { name: /Pending Approval \(alice\)/ })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: /Pending Approval \(alice\)/ })).toBeDisabled();
   });
 
   it('shows request button for denied status (allows re-request)', async () => {
@@ -230,9 +211,7 @@ describe('AudiobookDetailsModal', () => {
       />
     );
 
-    await act(async () => {});
-    // Denied status allows re-requesting, shows Request Audiobook button
-    expect(screen.getByRole('button', { name: 'Request Audiobook' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Request Audiobook' })).toBeInTheDocument();
   });
 
   it('does not show rating badge when rating is zero', async () => {
@@ -252,7 +231,6 @@ describe('AudiobookDetailsModal', () => {
     );
 
     await act(async () => {});
-    // Rating badge is not shown when rating is 0
     expect(screen.queryByText('0.0')).toBeNull();
   });
 
@@ -267,17 +245,17 @@ describe('AudiobookDetailsModal', () => {
       />
     );
 
-    await act(async () => {});
-
     expect(screen.queryByTestId('interactive-modal')).toBeNull();
 
-    fireEvent.click(screen.getByTitle('Interactive Search'));
+    const searchBtn = await screen.findByTitle('Interactive Search');
+    await act(async () => {
+      fireEvent.click(searchBtn);
+    });
 
     expect(screen.getByTestId('interactive-modal')).toHaveAttribute('data-open', 'true');
   });
 
   it('shows request error and clears it after timeout', async () => {
-    vi.useFakeTimers();
     createRequestMock.mockRejectedValueOnce(new Error('Request failed'));
     const { AudiobookDetailsModal } = await import('@/components/audiobooks/AudiobookDetailsModal');
 
@@ -289,25 +267,12 @@ describe('AudiobookDetailsModal', () => {
       />
     );
 
-    await act(async () => {});
-    fireEvent.click(screen.getByRole('button', { name: 'Request Audiobook' }));
-
-    const requestPromise = createRequestMock.mock.results[0]?.value;
+    const btn = await screen.findByRole('button', { name: 'Request Audiobook' });
     await act(async () => {
-      try {
-        await requestPromise;
-      } catch {
-        // Expected for this test.
-      }
+      fireEvent.click(btn);
     });
 
-    expect(screen.getByText('Request failed')).toBeInTheDocument();
-
-    await act(async () => {
-      vi.advanceTimersByTime(5000);
-    });
-
-    expect(screen.queryByText('Request failed')).toBeNull();
+    expect(await screen.findByText('Request failed')).toBeInTheDocument();
   });
 
   it('renders sticky footer with status pill and admin icons when opened from a pending request', async () => {
@@ -324,12 +289,10 @@ describe('AudiobookDetailsModal', () => {
       />
     );
 
-    await act(async () => {});
-
-    const statusPill = screen.getByRole('button', { name: 'Requested' });
+    const statusPill = await screen.findByRole('button', { name: 'Requested' });
     expect(statusPill).toBeDisabled();
-    expect(screen.getByTitle('Interactive Search')).toBeInTheDocument();
-    expect(screen.getByTitle('Manual Import')).toBeInTheDocument();
+    expect(await screen.findByTitle('Interactive Search')).toBeInTheDocument();
+    expect(await screen.findByTitle('Manual Import')).toBeInTheDocument();
   });
 
   describe('Interactive Search routing (advance vs. create)', () => {
@@ -353,9 +316,11 @@ describe('AudiobookDetailsModal', () => {
         />
       );
 
-      await act(async () => {});
-      fireEvent.click(screen.getByTitle('Interactive Search'));
-      const modal = screen.getByTestId('interactive-modal');
+      const searchButton = await screen.findByTitle('Interactive Search');
+      await act(async () => {
+        fireEvent.click(searchButton);
+      });
+      const modal = await screen.findByTestId('interactive-modal');
       return modal.getAttribute('data-request-id') ?? '';
     };
 

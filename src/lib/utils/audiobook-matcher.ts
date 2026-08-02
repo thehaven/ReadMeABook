@@ -280,7 +280,6 @@ export async function enrichAudiobooksWithMatches(
         orderBy: {
           createdAt: 'desc',
         },
-        take: 1,
       },
     },
   });
@@ -302,8 +301,10 @@ export async function enrichAudiobooksWithMatches(
     isRmabAvailable: boolean;
   }>();
 
+  const COMPLETED_STATUSES = ['available', 'downloaded', 'completed'];
+
   for (const record of audiobookRecords) {
-    const isCompletedInRmab = record.status === 'completed' || !!record.filePath;
+    const isCompletedInRmab = record.status === 'completed' || !!record.filePath || !!(record as any).absItemId;
 
     let info: {
       requestId: string;
@@ -314,12 +315,14 @@ export async function enrichAudiobooksWithMatches(
     } | null = null;
 
     if (record.requests.length > 0) {
-      const request = record.requests[0];
-      const isReqCompleted = ['available', 'downloaded', 'completed'].includes(request.status);
+      // Prioritize available/completed requests over newer awaiting_search requests
+      const availableReq = record.requests.find(r => COMPLETED_STATUSES.includes(r.status));
+      const request = availableReq || record.requests[0];
+      const isReqCompleted = COMPLETED_STATUSES.includes(request.status);
 
       info = {
         requestId: request.id,
-        requestStatus: request.status,
+        requestStatus: isCompletedInRmab ? 'available' : request.status,
         requestedByUserId: request.userId || '',
         requestedByUsername: request.user?.plexUsername || '',
         isRmabAvailable: isCompletedInRmab || isReqCompleted,
@@ -327,7 +330,7 @@ export async function enrichAudiobooksWithMatches(
     } else if (isCompletedInRmab) {
       info = {
         requestId: '',
-        requestStatus: 'downloaded',
+        requestStatus: 'available',
         requestedByUserId: '',
         requestedByUsername: '',
         isRmabAvailable: true,

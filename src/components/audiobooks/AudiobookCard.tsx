@@ -50,6 +50,8 @@ const PLACEHOLDER_COVER = '/placeholder_cover.svg';
 
 export function AudiobookCard({
   audiobook,
+  isRequested,
+  requestStatus,
   onRequestSuccess,
   squareCovers = false,
 }: AudiobookCardProps) {
@@ -62,10 +64,13 @@ export function AudiobookCard({
   const [localIsIgnored, setLocalIsIgnored] = useState<boolean | undefined>(undefined);
   const [coverError, setCoverError] = useState(false);
 
-  // Build a display-only audiobook with local overrides
-  const displayAudiobook = localRequestStatus !== undefined
-    ? { ...audiobook, requestStatus: localRequestStatus }
-    : audiobook;
+  // Build a display-only audiobook with local overrides and top-level props
+  const displayAudiobook = {
+    ...audiobook,
+    ...(isRequested !== undefined ? { isRequested } : {}),
+    ...(requestStatus !== undefined ? { requestStatus } : {}),
+    ...(localRequestStatus !== undefined ? { requestStatus: localRequestStatus } : {}),
+  };
   const status = getStatusConfig(displayAudiobook);
   const isIgnored = localIsIgnored !== undefined ? localIsIgnored : audiobook.isIgnored;
 
