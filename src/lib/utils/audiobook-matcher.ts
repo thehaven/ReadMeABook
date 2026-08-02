@@ -238,7 +238,11 @@ export async function enrichAudiobooksWithMatches(
   const asins = audiobooks.map(book => book.asin);
 
   // Normalize title and author for fuzzy matching fallback
-  const normalizeText = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+  const normalizeText = (text: string) => {
+    // Strip subtitle after colon or open parenthesis before normalization
+    const baseText = text.split(':')[0].split('(')[0];
+    return baseText.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+  };
 
   // Extract titles and authors for fallback matching
   const titles = audiobooks.map(b => b.title).filter(Boolean);
