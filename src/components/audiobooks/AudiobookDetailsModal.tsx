@@ -49,11 +49,11 @@ interface AudiobookDetailsModalProps {
 
 // Status helper
 const getStatusInfo = (isAvailable: boolean, requestStatus: string | null, requestedByUsername: string | null) => {
-  if (isAvailable || requestStatus === 'completed') {
+  if (isAvailable || requestStatus === 'completed' || requestStatus === 'downloaded') {
     return { type: 'available', label: 'In Your Library', canRequest: false };
   }
 
-  const processingStatuses = ['downloading', 'processing', 'downloaded', 'awaiting_import'];
+  const processingStatuses = ['downloading', 'processing', 'awaiting_import'];
   if (requestStatus && processingStatuses.includes(requestStatus)) {
     return { type: 'processing', label: 'Processing', canRequest: false };
   }

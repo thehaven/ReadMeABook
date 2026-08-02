@@ -25,11 +25,11 @@ interface AudiobookCardProps {
 
 // Status configuration for elegant display
 const getStatusConfig = (audiobook: Audiobook) => {
-  if (audiobook.isAvailable || audiobook.requestStatus === 'completed') {
+  if (audiobook.isAvailable || audiobook.requestStatus === 'completed' || audiobook.requestStatus === 'downloaded') {
     return { type: 'available', label: 'In Library', color: 'emerald' };
   }
 
-  const processingStatuses = ['downloading', 'processing', 'downloaded', 'awaiting_import'];
+  const processingStatuses = ['downloading', 'processing', 'awaiting_import'];
   if (audiobook.requestStatus && processingStatuses.includes(audiobook.requestStatus)) {
     return { type: 'processing', label: 'Processing', color: 'amber' };
   }
