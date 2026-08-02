@@ -256,8 +256,12 @@ export async function processMonitorDownload(payload: MonitorDownloadPayload): P
         },
       });
 
-      // Auto-block this release ONLY if it was NOT a duplicate detection failure
-      if (!isDuplicateFail) {
+      // Auto-block this release regardless of whether it was flagged as a duplicate.
+      // Duplicate failures mean the client already has the file in queue/history and will
+      // keep rejecting it; without blocking it, the next search cycle selects the same
+      // wrong release again indefinitely. Status is still reset to awaiting_search so a
+      // fresh search fires and a different release can be picked.
+      {
         const failedDownload = await prisma.downloadHistory.findUnique({
           where: { id: downloadHistoryId },
         });
@@ -269,8 +273,8 @@ export async function processMonitorDownload(payload: MonitorDownloadPayload): P
             indexerName: failedDownload.indexerName ?? null,
             indexerId: failedDownload.indexerId ?? null,
             source: 'download_fail',
-            reason: classifyDownloadFailure(clientErrorDetail),
-            reasonDetail: clientErrorDetail,
+            reason: isDuplicateFail ? 'Duplicate in download client' : classifyDownloadFailure(clientErrorDetail),
+            reasonDetail: isDuplicateFail ? 'Download client flagged as duplicate — release blocked to prevent repeated re-submission' : clientErrorDetail,
             downloadHistoryId: failedDownload.id,
             jobId,
           });
