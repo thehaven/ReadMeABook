@@ -237,13 +237,24 @@ export async function enrichAudiobooksWithMatches(
   // Always enrich with request status (check ANY user's requests)
   const asins = audiobooks.map(book => book.asin);
 
-  // Get all audiobook records for these ASINs with status and filePath
+  // Normalize title and author for fuzzy matching fallback
+  const normalizeText = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+
+  // Extract titles and authors for fallback matching
+  const titles = audiobooks.map(b => b.title).filter(Boolean);
+
+  // Get all audiobook records for these ASINs OR titles
   const audiobookRecords = await prisma.audiobook.findMany({
     where: {
-      audibleAsin: { in: asins },
+      OR: [
+        { audibleAsin: { in: asins } },
+        { title: { in: titles } },
+      ],
     },
     select: {
       id: true,
+      title: true,
+      author: true,
       audibleAsin: true,
       status: true,
       filePath: true,
@@ -270,7 +281,7 @@ export async function enrichAudiobooksWithMatches(
     },
   });
 
-  // Create a map of ASIN -> request & RMAB database status info
+  // Create maps: ASIN -> info and Title+Author -> info
   const requestMap = new Map<string, {
     requestId: string;
     requestStatus: string;
@@ -279,37 +290,61 @@ export async function enrichAudiobooksWithMatches(
     isRmabAvailable: boolean;
   }>();
 
-  for (const record of audiobookRecords) {
-    if (!record.audibleAsin) continue;
+  const titleAuthorMap = new Map<string, {
+    requestId: string;
+    requestStatus: string;
+    requestedByUserId: string;
+    requestedByUsername: string;
+    isRmabAvailable: boolean;
+  }>();
 
-    // Check if ReadMeABook's own database records this audiobook as completed/downloaded
+  for (const record of audiobookRecords) {
     const isCompletedInRmab = record.status === 'completed' || !!record.filePath;
+
+    let info: {
+      requestId: string;
+      requestStatus: string;
+      requestedByUserId: string;
+      requestedByUsername: string;
+      isRmabAvailable: boolean;
+    } | null = null;
 
     if (record.requests.length > 0) {
       const request = record.requests[0];
       const isReqCompleted = ['available', 'downloaded', 'completed'].includes(request.status);
 
-      requestMap.set(record.audibleAsin, {
+      info = {
         requestId: request.id,
         requestStatus: request.status,
-        requestedByUserId: request.userId,
-        requestedByUsername: request.user.plexUsername,
+        requestedByUserId: request.userId || '',
+        requestedByUsername: request.user?.plexUsername || '',
         isRmabAvailable: isCompletedInRmab || isReqCompleted,
-      });
+      };
     } else if (isCompletedInRmab) {
-      requestMap.set(record.audibleAsin, {
+      info = {
         requestId: '',
         requestStatus: 'downloaded',
         requestedByUserId: '',
         requestedByUsername: '',
         isRmabAvailable: true,
-      });
+      };
+    }
+
+    if (info) {
+      if (record.audibleAsin) {
+        requestMap.set(record.audibleAsin, info);
+      }
+      if (record.title) {
+        const key = `${normalizeText(record.title)}:${normalizeText(record.author || '')}`;
+        titleAuthorMap.set(key, info);
+      }
     }
   }
 
   // Add request status and RMAB availability to results
   for (const result of results) {
-    const requestInfo = requestMap.get(result.asin);
+    const titleKey = `${normalizeText(result.title || '')}:${normalizeText(result.author || '')}`;
+    const requestInfo = requestMap.get(result.asin) || titleAuthorMap.get(titleKey);
     const enrichedResult = result as any;
     if (requestInfo) {
       enrichedResult.isRequested = true;
