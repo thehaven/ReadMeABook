@@ -25,7 +25,7 @@ interface AudiobookCardProps {
 
 // Status configuration for elegant display
 const getStatusConfig = (audiobook: Audiobook) => {
-  if (audiobook.isAvailable || audiobook.requestStatus === 'completed' || audiobook.requestStatus === 'downloaded') {
+  if (audiobook.isAvailable || audiobook.requestStatus === 'completed' || audiobook.requestStatus === 'downloaded' || audiobook.requestStatus === 'available') {
     return { type: 'available', label: 'In Library', color: 'emerald' };
   }
 

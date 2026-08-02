@@ -49,7 +49,7 @@ interface AudiobookDetailsModalProps {
 
 // Status helper
 const getStatusInfo = (isAvailable: boolean, requestStatus: string | null, requestedByUsername: string | null) => {
-  if (isAvailable || requestStatus === 'completed' || requestStatus === 'downloaded') {
+  if (isAvailable || requestStatus === 'completed' || requestStatus === 'downloaded' || requestStatus === 'available') {
     return { type: 'available', label: 'In Your Library', canRequest: false };
   }
 
