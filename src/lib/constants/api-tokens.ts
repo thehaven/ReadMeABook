@@ -55,6 +55,8 @@ export const API_TOKEN_ALLOWED_ENDPOINTS: readonly AllowedEndpoint[] = [
   { method: 'GET', path: '/api/admin/metrics' },
   { method: 'GET', path: '/api/admin/downloads/active' },
   { method: 'GET', path: '/api/admin/requests/recent' },
+  { method: 'GET', path: '/api/admin/scheduler/status' },
+  { method: 'POST', path: '/api/admin/scheduler/trigger' },
 ] as const;
 
 /**
@@ -118,6 +120,23 @@ export const API_TOKEN_ENDPOINT_DOCS: readonly EndpointDoc[] = [
     description:
       'Returns currently active downloads including progress, speed, and ETA.',
     requiresAdmin: true,
+  },
+  {
+    method: 'GET',
+    path: '/api/admin/scheduler/status',
+    title: 'Scheduled jobs status',
+    description:
+      'Returns status and freshness execution metadata for all internal cron scheduled jobs.',
+    requiresAdmin: true,
+  },
+  {
+    method: 'POST',
+    path: '/api/admin/scheduler/trigger',
+    title: 'Trigger scheduled job',
+    description:
+      'Manually triggers immediate background execution of a scheduled job by ID or type (e.g. `retry_missing_torrents`). Body: `{ "type": "retry_missing_torrents" }`.',
+    requiresAdmin: true,
+    isWrite: true,
   },
   {
     method: 'GET',
