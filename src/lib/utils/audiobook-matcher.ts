@@ -237,7 +237,7 @@ export async function enrichAudiobooksWithMatches(
   // Always enrich with request status (check ANY user's requests)
   const asins = audiobooks.map(book => book.asin);
 
-  // Get all audiobook records for these ASINs with ALL audiobook requests (not ebook requests)
+  // Get all audiobook records for these ASINs with status and filePath
   const audiobookRecords = await prisma.audiobook.findMany({
     where: {
       audibleAsin: { in: asins },
@@ -245,6 +245,8 @@ export async function enrichAudiobooksWithMatches(
     select: {
       id: true,
       audibleAsin: true,
+      status: true,
+      filePath: true,
       requests: {
         where: {
           deletedAt: null, // Only include active (non-deleted) requests
@@ -268,37 +270,57 @@ export async function enrichAudiobooksWithMatches(
     },
   });
 
-  // Create a map of ASIN -> request info
+  // Create a map of ASIN -> request & RMAB database status info
   const requestMap = new Map<string, {
     requestId: string;
     requestStatus: string;
     requestedByUserId: string;
     requestedByUsername: string;
+    isRmabAvailable: boolean;
   }>();
 
   for (const record of audiobookRecords) {
-    if (record.requests.length > 0 && record.audibleAsin) {
+    if (!record.audibleAsin) continue;
+
+    // Check if ReadMeABook's own database records this audiobook as completed/downloaded
+    const isCompletedInRmab = record.status === 'completed' || !!record.filePath;
+
+    if (record.requests.length > 0) {
       const request = record.requests[0];
+      const isReqCompleted = ['available', 'downloaded', 'completed'].includes(request.status);
+
       requestMap.set(record.audibleAsin, {
         requestId: request.id,
         requestStatus: request.status,
         requestedByUserId: request.userId,
         requestedByUsername: request.user.plexUsername,
+        isRmabAvailable: isCompletedInRmab || isReqCompleted,
+      });
+    } else if (isCompletedInRmab) {
+      requestMap.set(record.audibleAsin, {
+        requestId: '',
+        requestStatus: 'downloaded',
+        requestedByUserId: '',
+        requestedByUsername: '',
+        isRmabAvailable: true,
       });
     }
   }
 
-  // Add request status to results
+  // Add request status and RMAB availability to results
   for (const result of results) {
     const requestInfo = requestMap.get(result.asin);
     const enrichedResult = result as any;
     if (requestInfo) {
       enrichedResult.isRequested = true;
       enrichedResult.requestStatus = requestInfo.requestStatus;
-      enrichedResult.requestId = requestInfo.requestId;
-      enrichedResult.requestedByUserId = requestInfo.requestedByUserId;
+      enrichedResult.requestId = requestInfo.requestId || null;
+      enrichedResult.requestedByUserId = requestInfo.requestedByUserId || null;
+      if (requestInfo.isRmabAvailable) {
+        enrichedResult.isAvailable = true;
+      }
       // Only include username if it's not the current user
-      if (userId && requestInfo.requestedByUserId !== userId) {
+      if (userId && requestInfo.requestedByUserId && requestInfo.requestedByUserId !== userId) {
         enrichedResult.requestedByUsername = requestInfo.requestedByUsername;
       }
     } else {
