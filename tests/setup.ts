@@ -3,10 +3,24 @@
  * Documentation: documentation/README.md
  */
 
-import React from 'react';
 import { afterAll, afterEach, beforeAll, vi } from 'vitest';
+import React from 'react';
 import '@testing-library/jest-dom';
-import { cleanup } from '@testing-library/react';
+
+// React 19 compatibility patch for react-dom/test-utils & @testing-library/react
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const reactCjs = require('react');
+  const actFn = reactCjs.act || ((cb: () => any) => cb());
+  if (reactCjs && !reactCjs.act) {
+    reactCjs.act = actFn;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const testUtils = require('react-dom/test-utils');
+  if (testUtils) {
+    testUtils.act = reactCjs.act || actFn;
+  }
+} catch {}
 
 vi.mock('next/link', () => ({
   default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) =>

@@ -12,10 +12,15 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
+      'react-dom/test-utils': path.resolve(__dirname, 'tests/mocks/react-dom-test-utils.ts'),
     },
   },
   test: {
     environment: 'node',
+    environmentMatchGlobs: [
+      ['tests/components/**', 'jsdom'],
+      ['tests/app/**', 'jsdom'],
+    ],
     globals: true,
     setupFiles: ['tests/setup.ts'],
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
