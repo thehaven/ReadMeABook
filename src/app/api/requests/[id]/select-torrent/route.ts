@@ -9,8 +9,10 @@ import { prisma } from '@/lib/db';
 import { getJobQueueService } from '@/lib/services/job-queue.service';
 import { TorrentResult } from '@/lib/utils/ranking-algorithm';
 import { RMABLogger } from '@/lib/utils/logger';
+import { unblockReleaseForRequest } from '@/lib/services/blocklist.service';
 
 const logger = RMABLogger.create('API.SelectTorrent');
+
 
 /**
  * POST /api/requests/[id]/select-torrent
@@ -150,6 +152,11 @@ export async function POST(
 
       // Auto-approved - start download immediately
       logger.info(`User selected torrent: ${torrent.title}`, { requestId: id });
+
+      // Unblock release if it was previously auto-blocked
+      await unblockReleaseForRequest(id, torrent.title, torrent.infoHash).catch((error) => {
+        logger.warn('Failed to unblock release on selection', { error: error instanceof Error ? error.message : String(error) });
+      });
 
       // Trigger download job with the selected torrent
       await jobQueue.addDownloadJob(

@@ -155,6 +155,42 @@ export async function removeBlock(id: string): Promise<void> {
 }
 
 /**
+ * Remove any matching blocklist entries for a specific request by release name or hash.
+ * Called when a user manually selects a release to override a previous block.
+ */
+export async function unblockReleaseForRequest(
+  requestId: string,
+  releaseName: string,
+  releaseHash?: string | null
+): Promise<{ count: number }> {
+  const releaseKey = normalizeReleaseKey(releaseName);
+  const orClauses: Prisma.BlockedReleaseWhereInput[] = [{ releaseKey }];
+  if (releaseHash) {
+    orClauses.push({ releaseHash });
+  }
+
+  const result = await prisma.blockedRelease.deleteMany({
+    where: {
+      requestId,
+      OR: orClauses,
+    },
+  });
+  return { count: result.count };
+}
+
+/**
+ * Clear all blocked releases for a specific request.
+ */
+export async function clearBlocklistForRequest(
+  requestId: string
+): Promise<{ count: number }> {
+  const result = await prisma.blockedRelease.deleteMany({
+    where: { requestId },
+  });
+  return { count: result.count };
+}
+
+/**
  * Bulk delete blocklist entries matching the provided where clause. The admin
  * "Clear filtered (N)" action passes the same where clause used by the listing
  * query so the operation is filter-scoped, never a global wipe.
@@ -165,3 +201,4 @@ export async function clearBlocklist(
   const result = await prisma.blockedRelease.deleteMany({ where });
   return { count: result.count };
 }
+

@@ -275,6 +275,45 @@ describe('removeBlock', () => {
   });
 });
 
+describe('unblockReleaseForRequest', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('deletes rows matching requestId and normalized releaseKey or hash', async () => {
+    prismaMock.blockedRelease.deleteMany.mockResolvedValue({ count: 2 });
+
+    const { unblockReleaseForRequest } = await import('@/lib/services/blocklist.service');
+    const result = await unblockReleaseForRequest('req-1', '  Some.Release.NAME  ', 'hash-123');
+
+    expect(prismaMock.blockedRelease.deleteMany).toHaveBeenCalledWith({
+      where: {
+        requestId: 'req-1',
+        OR: [{ releaseKey: 'some.release.name' }, { releaseHash: 'hash-123' }],
+      },
+    });
+    expect(result).toEqual({ count: 2 });
+  });
+});
+
+describe('clearBlocklistForRequest', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('deletes all blocklist rows for a specific request ID', async () => {
+    prismaMock.blockedRelease.deleteMany.mockResolvedValue({ count: 5 });
+
+    const { clearBlocklistForRequest } = await import('@/lib/services/blocklist.service');
+    const result = await clearBlocklistForRequest('req-1');
+
+    expect(prismaMock.blockedRelease.deleteMany).toHaveBeenCalledWith({
+      where: { requestId: 'req-1' },
+    });
+    expect(result).toEqual({ count: 5 });
+  });
+});
+
 describe('clearBlocklist', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -303,3 +342,4 @@ describe('clearBlocklist', () => {
     });
   });
 });
+

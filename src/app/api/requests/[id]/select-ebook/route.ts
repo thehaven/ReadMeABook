@@ -12,6 +12,7 @@ import { prisma } from '@/lib/db';
 import { getJobQueueService } from '@/lib/services/job-queue.service';
 import { getConfigService } from '@/lib/services/config.service';
 import { RMABLogger } from '@/lib/utils/logger';
+import { unblockReleaseForRequest } from '@/lib/services/blocklist.service';
 
 const logger = RMABLogger.create('API.SelectEbook');
 
@@ -138,6 +139,11 @@ export async function POST(
 
         const audiobook = parentRequest.audiobook;
         const jobQueue = getJobQueueService();
+
+        // Unblock release if previously auto-blocked
+        await unblockReleaseForRequest(ebookRequest.id, selectedEbook.title).catch((error) => {
+          logger.warn('Failed to unblock ebook release on selection', { error: error instanceof Error ? error.message : String(error) });
+        });
 
         // Route to appropriate download based on source
         if (selectedEbook.source === 'annas_archive') {
