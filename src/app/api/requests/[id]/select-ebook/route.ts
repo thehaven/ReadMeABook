@@ -13,6 +13,7 @@ import { getJobQueueService } from '@/lib/services/job-queue.service';
 import { getConfigService } from '@/lib/services/config.service';
 import { RMABLogger } from '@/lib/utils/logger';
 import { unblockReleaseForRequest } from '@/lib/services/blocklist.service';
+import type { TorrentResult } from '@/lib/utils/ranking-algorithm';
 
 const logger = RMABLogger.create('API.SelectEbook');
 
@@ -277,7 +278,7 @@ async function handleIndexerDownload(
     id: audiobook.id,
     title: audiobook.title,
     author: audiobook.author,
-  }, torrentForJob as any); // Cast to any since ebook torrents don't have audiobook format field
+  }, torrentForJob as unknown as TorrentResult);
 
   logger.info(`Queued download job for request ${requestId}`);
 }

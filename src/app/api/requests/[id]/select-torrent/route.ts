@@ -122,7 +122,7 @@ export async function POST(
           where: { id },
           data: {
             status: 'awaiting_approval',
-            selectedTorrent: torrent as any, // Store the selected torrent
+            selectedTorrent: JSON.parse(JSON.stringify(torrent)), // Store the selected torrent
             updatedAt: new Date(),
           },
           include: {
