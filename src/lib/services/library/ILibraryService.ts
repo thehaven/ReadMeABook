@@ -55,4 +55,11 @@ export interface ILibraryService {
 
   // Scanning
   triggerLibraryScan(libraryId: string): Promise<void>;
+
+  // Cover Caching
+  getCoverCachingParams(): Promise<{
+    backendBaseUrl: string;
+    authToken: string;
+    backendMode: 'plex' | 'audiobookshelf';
+  }>;
 }

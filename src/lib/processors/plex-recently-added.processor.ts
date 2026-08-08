@@ -76,7 +76,7 @@ export async function processPlexRecentlyAddedCheck(payload: PlexRecentlyAddedPa
       : await configService.get('plex_audiobook_library_id');
 
     // Get cover caching parameters (needed for thumbnail caching)
-    const coverCachingParams = await (libraryService as any).getCoverCachingParams();
+    const coverCachingParams = await libraryService.getCoverCachingParams();
 
     // Fetch top 10 recently added items using abstraction layer
     const recentItems = await libraryService.getRecentlyAdded(libraryId!, 10);

@@ -53,7 +53,7 @@ export async function processScanPlex(payload: ScanPlexPayload): Promise<any> {
     }
 
     // Get cover caching parameters (needed for thumbnail caching)
-    const coverCachingParams = await (libraryService as any).getCoverCachingParams();
+    const coverCachingParams = await libraryService.getCoverCachingParams();
 
     logger.info(`Fetching content from library ${targetLibraryId}`);
 

@@ -145,6 +145,24 @@ export class AudiobookshelfLibraryService implements ILibraryService {
     }
   }
 
+  async getCoverCachingParams(): Promise<{
+    backendBaseUrl: string;
+    authToken: string;
+    backendMode: 'plex' | 'audiobookshelf';
+  }> {
+    const config = await this.configService.getMany(['audiobookshelf.server_url', 'audiobookshelf.api_token']);
+
+    if (!config['audiobookshelf.server_url'] || !config['audiobookshelf.api_token']) {
+      throw new Error('Audiobookshelf server configuration is incomplete');
+    }
+
+    return {
+      backendBaseUrl: config['audiobookshelf.server_url'],
+      authToken: config['audiobookshelf.api_token'],
+      backendMode: 'audiobookshelf',
+    };
+  }
+
   private mapABSItemToLibraryItem(item: ABSLibraryItem): LibraryItem {
     const metadata = item.media.metadata;
     return {
@@ -164,3 +182,4 @@ export class AudiobookshelfLibraryService implements ILibraryService {
     };
   }
 }
+
