@@ -266,8 +266,8 @@ export class ConfigurationService {
   async getStuckRequestTimeoutHours(): Promise<number> {
     const dbValue = await this.get('system.stuck_request_timeout_hours');
     const envValue = process.env.STUCK_REQUEST_TIMEOUT_HOURS;
-    const val = parseInt(dbValue || envValue || '6', 10);
-    return isNaN(val) ? 6 : Math.max(0, val);
+    const val = parseInt(dbValue || envValue || '24', 10);
+    return isNaN(val) ? 24 : Math.max(0, val);
   }
 
   /**
