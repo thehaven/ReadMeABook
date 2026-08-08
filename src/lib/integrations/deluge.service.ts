@@ -8,7 +8,7 @@ import { RMAB_USER_AGENT } from '../utils/user-agent';
 import https from 'https';
 import path from 'path';
 import { DOWNLOAD_CLIENT_TIMEOUT } from '../constants/download-timeouts';
-import * as parseTorrentModule from 'parse-torrent';
+import { parseTorrent } from '../utils/parse-torrent-helper';
 import { RMABLogger } from '../utils/logger';
 import { PathMapper, PathMappingConfig } from '../utils/path-mapper';
 import {
@@ -16,7 +16,6 @@ import {
   DownloadInfo, DownloadStatus, AddDownloadOptions, ConnectionTestResult,
 } from '../interfaces/download-client.interface';
 
-const parseTorrent = (parseTorrentModule as any).default || parseTorrentModule;
 const logger = RMABLogger.create('Deluge');
 
 export class DelugeService implements IDownloadClient {

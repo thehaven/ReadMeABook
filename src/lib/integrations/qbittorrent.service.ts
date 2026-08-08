@@ -8,7 +8,7 @@ import { RMAB_USER_AGENT } from '../utils/user-agent';
 import https from 'https';
 import path from 'path';
 import { DOWNLOAD_CLIENT_TIMEOUT } from '../constants/download-timeouts';
-import * as parseTorrentModule from 'parse-torrent';
+import { parseTorrent } from '../utils/parse-torrent-helper';
 import FormData from 'form-data';
 import { RMABLogger } from '../utils/logger';
 import { PathMapper, PathMappingConfig } from '../utils/path-mapper';
@@ -21,9 +21,6 @@ import {
   AddDownloadOptions,
   ConnectionTestResult,
 } from '../interfaces/download-client.interface';
-
-// Handle both ESM and CommonJS imports
-const parseTorrent = (parseTorrentModule as any).default || parseTorrentModule;
 
 // Module-level logger
 const logger = RMABLogger.create('QBittorrent');
