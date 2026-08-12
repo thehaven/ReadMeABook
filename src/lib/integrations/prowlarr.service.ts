@@ -74,6 +74,8 @@ interface ProwlarrSearchResult {
   [key: string]: any;  // Allow any additional fields from Prowlarr API
 }
 
+const PROWLARR_TIMEOUT = 120000; // 2 minutes (120s) timeout for Prowlarr API queries
+
 export class ProwlarrService {
   private client: AxiosInstance;
   private baseUrl: string;
@@ -90,7 +92,7 @@ export class ProwlarrService {
         'User-Agent': RMAB_USER_AGENT,
         'X-Api-Key': this.apiKey,
       },
-      timeout: DOWNLOAD_CLIENT_TIMEOUT,
+      timeout: PROWLARR_TIMEOUT,
       paramsSerializer: {
         serialize: (params) => {
           // Custom serializer to handle arrays correctly for Prowlarr API
@@ -233,20 +235,21 @@ export class ProwlarrService {
       }
     }
 
-    logger.info(`Searching with ${queries.length} query variations`, { queries });
+    logger.info(`Searching concurrently with ${queries.length} query variations`, { queries });
 
-    const allResults: TorrentResult[] = [];
-
-    for (const query of queries) {
+    const searchPromises = queries.map(async (query) => {
       try {
         const results = await this.search(query, filters);
         logger.info(`Query "${query}" returned ${results.length} results`);
-        allResults.push(...results);
+        return results;
       } catch (error) {
         logger.error(`Query "${query}" failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        // Continue with other queries even if one fails
+        return [];
       }
-    }
+    });
+
+    const queryResults = await Promise.all(searchPromises);
+    const allResults: TorrentResult[] = queryResults.flat();
 
     const deduplicated = this.deduplicateResults(allResults);
     logger.info(`Multi-query search: ${allResults.length} total → ${deduplicated.length} after dedup (${allResults.length - deduplicated.length} duplicates removed)`);

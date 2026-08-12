@@ -34,7 +34,7 @@
     "jsonwebtoken": "^9.0.2",
     "next": "16.0.7",
     "openid-client": "^4.9.1",
-    "parse-torrent": "^11.0.19",
+    "parse-torrent": "^9.1.5",
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "react-swipeable": "^7.0.1",
